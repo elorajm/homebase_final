@@ -3,6 +3,7 @@
 	import favicon from '#lib/assets/favicon.svg';
 	import type { LayoutProps } from './$types';
 
+	/** Global styles and the favicon apply to every route group, so they live in the root layout. */
 	let { children }: LayoutProps = $props();
 </script>
 

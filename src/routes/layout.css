@@ -1,2 +1,83 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
+
+/*
+ * HomeBase design tokens. Sage is the primary brand color, mist is a muted blue for
+ * links and focus, apricot is the warm accent, and stone is the warm neutral.
+ */
+@theme {
+	--font-sans:
+		'Segoe UI Variable Text', 'Segoe UI', ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue',
+		Arial, sans-serif;
+
+	--color-sage-50: #f4f8f3;
+	--color-sage-100: #e7efe5;
+	--color-sage-200: #d0dfcc;
+	--color-sage-300: #afc7aa;
+	--color-sage-400: #8aa986;
+	--color-sage-500: #6d8f69;
+	--color-sage-600: #58785a;
+	--color-sage-700: #47614a;
+	--color-sage-800: #3a4f3d;
+	--color-sage-900: #2f3f31;
+
+	--color-mist-50: #f3f7fb;
+	--color-mist-100: #e4edf6;
+	--color-mist-200: #c9dbec;
+	--color-mist-300: #a4c0dc;
+	--color-mist-400: #7ca1c6;
+	--color-mist-500: #5f86ae;
+	--color-mist-600: #4d6e93;
+	--color-mist-700: #3e5a77;
+	--color-mist-800: #34495f;
+	--color-mist-900: #2c3d50;
+
+	--color-apricot-50: #fdf7f1;
+	--color-apricot-100: #faebdc;
+	--color-apricot-200: #f3d3b2;
+	--color-apricot-300: #eab384;
+	--color-apricot-400: #e0925a;
+	--color-apricot-500: #d4773e;
+	--color-apricot-600: #b75f2e;
+	--color-apricot-700: #974b26;
+	--color-apricot-800: #7b3f25;
+	--color-apricot-900: #66371f;
+
+	--color-stone-50: #faf9f7;
+	--color-stone-100: #f3f1ed;
+	--color-stone-200: #e6e2db;
+	--color-stone-300: #d4cec3;
+	--color-stone-400: #b3aca0;
+	--color-stone-500: #958d80;
+	--color-stone-600: #7a7266;
+	--color-stone-700: #625b51;
+	--color-stone-800: #4e4840;
+	--color-stone-900: #3a352f;
+}
+
+@layer base {
+	html {
+		color-scheme: light;
+		background-color: var(--color-stone-50);
+	}
+
+	body {
+		@apply text-stone-900 antialiased;
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--color-mist-600);
+		outline-offset: 2px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}

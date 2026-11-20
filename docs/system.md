@@ -1,6 +1,6 @@
 # HomeBase System Architecture
 
-> **Status: planned.** This document describes the intended architecture. The repository currently contains only the SvelteKit starter application, its tooling, and the Vercel adapter configuration.
+> **Status: partially implemented.** The frontend (route groups, application shell, pages, and public sign-in pages) is built on typed sample data. The backend (authentication, database, API routes, and real-time synchronization) is planned.
 
 ## 1. Overview
 
@@ -14,15 +14,53 @@ Three principles shape the design:
 
 ## 2. Components
 
-| Component         | Responsibility                                                                    | Technology                           | Status                          |
-| ----------------- | --------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------- |
-| Browser UI        | Pages, forms, dashboard, and real-time subscriptions                              | Svelte 5, Tailwind CSS               | Starter page only               |
-| SvelteKit server  | Session handling, page `load` functions, JSON API routes, validation, role checks | SvelteKit 3, TypeScript              | Starter only                    |
-| Hosting           | Runs the SvelteKit server as Vercel functions                                     | Vercel, `@sveltejs/adapter-vercel`   | Adapter installed; not deployed |
-| Supabase Auth     | Account creation, login, sessions, and JWT issuance                               | Supabase Auth                        | Planned                         |
-| PostgreSQL        | System of record, constraints, and business functions                             | Supabase PostgreSQL                  | Planned                         |
-| RLS policies      | Row-level access rules for every exposed table                                    | PostgreSQL policies                  | Planned                         |
-| Supabase Realtime | Broadcasts row changes that the subscriber is allowed to read                     | Supabase Realtime (Postgres Changes) | Planned                         |
+The table shows the current state of each component. The frontend is built and uses sample data. The backend is planned.
+
+| Component         | Responsibility                                                                    | Technology                           | Status                                                                   |
+| ----------------- | --------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------ |
+| Browser UI        | Pages, forms, dashboard, and navigation                                           | Svelte 5, Tailwind CSS, Lucide icons | Implemented on typed sample data                                         |
+| Real-time client  | Subscriptions to shared tables                                                    | Supabase JS client                   | Planned                                                                  |
+| SvelteKit server  | Session handling, page `load` functions, JSON API routes, validation, role checks | SvelteKit 3, TypeScript              | Route groups and layouts exist. No API routes, hooks, or data access yet |
+| Hosting           | Runs the SvelteKit server as Vercel functions                                     | Vercel, `@sveltejs/adapter-vercel`   | Adapter installed and building; not deployed                             |
+| Supabase Auth     | Account creation, login, sessions, and JWT issuance                               | Supabase Auth                        | Planned. The placeholder provider in `src/lib/auth/` stands in for it    |
+| PostgreSQL        | System of record, constraints, and business functions                             | Supabase PostgreSQL                  | Planned                                                                  |
+| RLS policies      | Row-level access rules for every exposed table                                    | PostgreSQL policies                  | Planned                                                                  |
+| Supabase Realtime | Broadcasts row changes that the subscriber is allowed to read                     | Supabase Realtime (Postgres Changes) | Planned                                                                  |
+
+### 2.1 Frontend route structure
+
+SvelteKit route groups organize the frontend without changing its URLs. A group name in parentheses does not appear in the path.
+
+| Route group | Layout                                                                    | URLs                                                                                                     |
+| ----------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| _(none)_    | `src/routes/+layout.svelte`: global stylesheet and favicon only           | Applies to every page                                                                                    |
+| `(app)`     | `(app)/+layout.svelte`: sidebar shell, with sample data from `+layout.ts` | `/dashboard`, `/tasks`, `/groceries`, `/calendar`, `/expenses`, `/leaderboard`, `/household`, `/profile` |
+| `(auth)`    | `(auth)/+layout.svelte`: centered public layout, without the sidebar      | `/login`, `/register`, `/forgot-password`                                                                |
+
+`src/routes/+page.ts` redirects `/` to `/dashboard`.
+
+Typed links use route IDs, which include the group segment. For example, `resolve('/(app)/tasks')` produces `/tasks`. The types for these IDs live in `src/lib/routes.ts`, where `AppRoute` and `AuthRoute` are defined. `publicPathname()` converts a route ID into its public URL. The navigation tests check that every public URL is unchanged.
+
+### 2.2 Authentication seam (prepared, not implemented)
+
+The frontend is ready for Supabase Auth without depending on it.
+
+| Module                       | Purpose                                                                                                                                                                           |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/auth/types.ts`      | `AuthUser`, `Profile`, `AuthResult`, the sign-in and registration inputs, and the `AuthProvider` interface                                                                        |
+| `src/lib/auth/validation.ts` | Client-side validation for email, passwords, confirmation, and names. These checks shape messages and are not authorization                                                       |
+| `src/lib/auth/messages.ts`   | Wording for each result. Messages state what did not happen, and never claim that an account was created or an email sent                                                         |
+| `src/lib/auth/provider.ts`   | `placeholderAuthProvider`, the only implementation today. It returns `not-connected` for every action and never reports a signed-in user                                          |
+| `src/lib/components/auth/`   | The sign-in, registration, and password-reset forms and their card. Each form accepts a `provider` prop, so the Supabase implementation can be injected without changing the form |
+
+The placeholder stores no passwords, creates no sessions, and makes no network calls. The `(app)` pages are reachable without signing in, because the preview has no authorization yet. The planned server-side checks are described in sections 5 and 6.
+
+### 2.3 Current frontend behavior
+
+- All data comes from typed sample data in `src/lib/mock/`. Nothing is saved, and reloading the page restores the sample data.
+- Forms and toggles change only the screen they are on. Each form says that its change is not saved.
+- The household switcher changes the household name in the header. The pages keep showing the sample household.
+- Sign-out and password changes are shown as disabled controls, with a note that sign-in is not connected.
 
 ## 3. Architecture diagram
 
@@ -191,6 +229,9 @@ Implementation rules:
 
 ## 8. Known limitations
 
+- **No authentication yet.** The sign-in, registration, and password-reset pages validate their input but do not check credentials, create accounts, or send email. The `(app)` pages are reachable without signing in.
+- **No persistence.** All data is sample data in `src/lib/mock/`. Changes made in a form or toggle last only until the page is reloaded.
+- **No real-time synchronization.** The interface does not receive updates from other users.
 - **One Supabase project per environment.** Development, preview, and production each need their own project. Data is not shared between them.
 - **Real-time is an addition to server loads, not a replacement.** Clients refetch after reconnecting to avoid missing events.
 - **Recurrence is intentionally simple.** Only daily, weekly, and monthly schedules are supported, without custom intervals. See [database.md](database.md#8-recurring-task-occurrences).

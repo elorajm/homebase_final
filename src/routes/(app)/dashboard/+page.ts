@@ -1,0 +1,26 @@
+import type { PageLoad } from './$types';
+import {
+	SAMPLE_ACTIVE_HOUSEHOLD,
+	SAMPLE_CURRENT_USER,
+	SAMPLE_EVENTS,
+	SAMPLE_EXPENSES,
+	SAMPLE_GROCERY_ITEMS,
+	SAMPLE_GROCERY_LIST_NAME,
+	SAMPLE_MEMBERS,
+	SAMPLE_POINT_TRANSACTIONS,
+	SAMPLE_TASKS,
+	SAMPLE_TODAY
+} from '#lib/mock/sample-data';
+
+export const load: PageLoad = () => ({
+	today: SAMPLE_TODAY,
+	household: SAMPLE_ACTIVE_HOUSEHOLD,
+	currentUser: SAMPLE_CURRENT_USER,
+	members: SAMPLE_MEMBERS,
+	tasks: SAMPLE_TASKS,
+	events: SAMPLE_EVENTS,
+	groceryListName: SAMPLE_GROCERY_LIST_NAME,
+	groceryItems: SAMPLE_GROCERY_ITEMS,
+	expenses: SAMPLE_EXPENSES,
+	transactions: SAMPLE_POINT_TRANSACTIONS
+});

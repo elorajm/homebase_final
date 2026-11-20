@@ -2,7 +2,7 @@
 
 This guide gets a new developer from a fresh clone to a running copy of the application. It covers only what the repository supports today. Steps that depend on Supabase, Vercel, or GitHub Actions are marked **planned**.
 
-> **Current state:** the repository runs a SvelteKit starter page. There are no HomeBase features, no database connection, and no environment variables are required yet.
+> **Current state:** the repository runs a frontend preview. Every planned page is built on sample data, and the public sign-in pages are placeholders. There is no database connection, no real authentication, and no environment variables are required yet.
 
 ## 1. Prerequisites
 
@@ -45,7 +45,7 @@ Do not commit `node_modules/`, `.svelte-kit/`, `.vercel/`, or `build/`. They are
 npm run dev
 ```
 
-Open the address printed in the terminal. Vite usually serves the app at `http://localhost:5173`. The page shows the default SvelteKit welcome message. That message is starter content and not part of HomeBase.
+Open the address printed in the terminal. Vite usually serves the app at `http://localhost:5173`. The home page redirects to the dashboard, which shows sample household data. The public sign-in pages are at `/login`, `/register`, and `/forgot-password`.
 
 Use `npm run dev -- --open` to open a browser tab automatically.
 
@@ -91,7 +91,7 @@ Expected results on a correctly configured machine:
 
 ## 6. Browser tests
 
-The browser component project and the end-to-end tests use Playwright's Chromium build. Install it once per machine:
+The browser component tests and the end-to-end tests use Playwright's Chromium build. Install it once per machine:
 
 ```sh
 npx playwright install chromium
@@ -99,9 +99,15 @@ npx playwright install chromium
 
 `npm run test:e2e` runs `playwright install` automatically, which also downloads browsers, so it needs network access. On Linux CI runners, Playwright may also need system libraries. See [deployment.md](deployment.md#4-github-actions-cicd-planned).
 
-The end-to-end configuration is in `playwright.config.ts`. It runs `npm run build && npm run preview` on port 4173 and matches files named `*.e2e.ts` or `*.e2e.js`. The current smoke test is `src/routes/page.svelte.e2e.ts`, which checks that the home page has a visible `h1`.
+The end-to-end configuration is in `playwright.config.ts`. It runs `npm run build && npm run preview` on port 4173 and matches files named `*.e2e.ts` or `*.e2e.js`. The current end-to-end tests are:
 
-Vitest's two projects are defined in `vite.config.ts`:
+| File                            | What it checks                                                                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `src/routes/navigation.e2e.ts`  | Every signed-in page returns 200 and shows its heading. Desktop and mobile navigation work.                                         |
+| `src/routes/auth.e2e.ts`        | Each authentication page renders without the app sidebar. Links between them work. Forms report that their action is not connected. |
+| `src/routes/page.svelte.e2e.ts` | The home page redirects to the dashboard and shows a visible heading.                                                               |
+
+Vitest has two projects, defined in `vite.config.ts`:
 
 | Project  | Environment                 | Files                                                                |
 | -------- | --------------------------- | -------------------------------------------------------------------- |
@@ -110,7 +116,7 @@ Vitest's two projects are defined in `vite.config.ts`:
 
 ## 7. Environment variables
 
-The starter application does not read any environment variables. The variables below are **planned** for the Supabase and invitation features.
+The preview does not read any environment variables. The variables below are **planned** for the Supabase and invitation features.
 
 | Variable                    | Scope       | Needed from      | Purpose                                                                                                                 |
 | --------------------------- | ----------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -170,30 +176,33 @@ None of these steps are required yet. They describe the setup the team will foll
 
 Recorded during verification on 2026-11-20, on Windows 11 with Node.js v22.19.0.
 
-| #   | Issue                                                                                                                                             | Status                                                                                                        |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 1   | `npm run build` fails on Windows with `EPERM: operation not permitted, symlink` (section 10.1).                                                   | Open. Cause identified. Needs a decision on a Windows setting.                                                |
-| 2   | The client Vitest project and `npm run test:e2e` fail because Playwright's Chromium is not installed.                                             | Resolved on the verification machine by `npx playwright install chromium`. Every new machine needs this step. |
-| 3   | The starter spec `src/lib/vitest-examples/Welcome.svelte.spec.ts` did not await `render`, which failed `@typescript-eslint/no-floating-promises`. | Resolved. `render` returns a Promise, so the spec now awaits it.                                              |
+| #   | Issue                                                                                                                                                       | Status                                                                                                                                                                    |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `npm run build` fails on Windows with `EPERM: operation not permitted, symlink` when Developer Mode is off and the terminal is not elevated (section 10.1). | Open for other machines. Developer Mode was enabled on the verification machine, outside this project, and the build passes there. The project does not add a workaround. |
+| 2   | The client Vitest project and `npm run test:e2e` fail because Playwright's Chromium is not installed.                                                       | Install it with `npx playwright install chromium`. Every new machine needs this step.                                                                                     |
+| 3   | The starter spec `src/lib/vitest-examples/Welcome.svelte.spec.ts` did not await `render`, which failed `@typescript-eslint/no-floating-promises`.           | Resolved. `render` returns a Promise, so the spec now awaits it.                                                                                                          |
 
 ### 10.1 Windows symlink error during production build
 
-`@sveltejs/adapter-vercel` 7.0.5 creates a directory symlink for every route that is not prerendered. It calls `fs.symlinkSync` without a type argument (see `node_modules/@sveltejs/adapter-vercel/index.js`). Windows allows symlink creation only when Developer Mode is on or the process is elevated. The starter's root route already triggers the error, so every dynamic HomeBase route will too.
+`@sveltejs/adapter-vercel` 7.0.5 creates a directory symlink for every route that is not prerendered. It calls `fs.symlinkSync` without a type argument (see `node_modules/@sveltejs/adapter-vercel/index.js`). Windows allows symlink creation only when Developer Mode is on or the process is elevated.
 
-Options:
+Developer Mode is on the verification machine. Its registry value (`AllowDevelopmentWithoutDevLicense`) is `1`, and it was off in an earlier session. The change was made outside this project, and the project does not depend on it.
+
+Options for a Windows machine where the build fails:
 
 - **Turn on Developer Mode** (Settings, System, For developers). This is a system-wide setting, so the team should agree to it first.
 - **Run the build from an elevated terminal.** This needs no persistent setting change, but it must be repeated for every build.
 - **Build on Linux.** CI runners or WSL with Node.js 22.17 or later both work. Vercel builds on Linux servers, so the production deployment is not affected by this issue.
 
-Verified locally: a fallback loaded only into the build process, which retries a failed directory symlink as a directory junction (junctions need no special privilege), lets `vite build` succeed. It also produces `.vercel/output`, and the Playwright smoke test passes against that build. The fallback is not committed to the repository.
+The project does not contain a build workaround for this issue. A workaround that patches the adapter's file system calls would be fragile and would hide the cause. A local fallback that retried each failed directory symlink as a junction was tested during development and was not committed.
 
 ### 10.2 Verified results
 
-Commands that passed on 2026-11-20:
+Results from the verification run for this update:
 
-- `npm run check`: 0 errors and 0 warnings across 486 files.
-- `npm run lint`: Prettier and ESLint both pass.
-- `npm run test:unit -- --run`: `server` project, 1 test passed. `client` project in Chromium, 1 component test passed.
-- `npm run build`: passes only with the Windows fallback in section 10.1. Without it, it fails as described in issue 1.
-- `npx playwright test`: 1 end-to-end test passed, with the same fallback loaded.
+- `npx prettier --check .`: all matched files use Prettier code style.
+- `npx eslint .`: no problems.
+- `svelte-check`: 0 errors and 0 warnings across 628 files.
+- `vitest run`: 20 files and 63 tests passed (13 server files with 46 tests, and 7 browser files with 17 tests).
+- `vite build`: passes with Developer Mode enabled.
+- Playwright: 22 end-to-end tests passed, with no fallback loaded.
